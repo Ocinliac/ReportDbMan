@@ -6,6 +6,7 @@ import importlib.metadata
 with open('requirements.txt') as f:
     REQUIRED_PACKAGES = [line.strip() for line in f if line.strip() and not line.startswith('#')]
 
+
 def install_package(package):
     """Install a package using pip."""
     try:
@@ -13,6 +14,7 @@ def install_package(package):
     except subprocess.CalledProcessError as e:
         print(f"Failed to install {package}: {e}")
         sys.exit(1)
+
 
 def check_and_install_packages():
     """Check for missing packages and install them."""
@@ -30,6 +32,7 @@ def check_and_install_packages():
         print("All required packages are already installed.")
         return False
 
+
 def relaunch_app():
     """Relaunch the application after installing missing packages."""
     try:
@@ -39,12 +42,14 @@ def relaunch_app():
         print(f"Failed to relaunch the application: {e}")
         sys.exit(1)
 
+
 def main():
     print("Starting the application...")
     # Import setup_database after ensuring all packages are installed
     from db.setup import setup_database
     setup_database()
     # Add more functionality as needed
+
 
 if __name__ == '__main__':
     if check_and_install_packages():
