@@ -42,6 +42,7 @@ def relaunch_app():
         print(f"Failed to relaunch the application: {e}")
         sys.exit(1)
 
+from gui.app import App
 
 def main():
     print("Starting the application...")
@@ -49,6 +50,8 @@ def main():
     from db.setup import setup_database
     setup_database()
     # Add more functionality as needed
+    app = App()
+    app.mainloop()
 
 
 if __name__ == '__main__':
