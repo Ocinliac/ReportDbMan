@@ -1,3 +1,5 @@
+# db/models.py
+
 from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, Date, Boolean, Text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
@@ -8,7 +10,7 @@ Base = declarative_base()
 # Table: Funds
 class Fund(Base):
     __tablename__ = 'funds'
-    fund_id = Column(Integer, primary_key=True)
+    fund_id = Column(Integer, primary_key=True, autoincrement=True)  # Auto-incremented ID
     official_name = Column(String, nullable=False)
     marketing_name = Column(String, nullable=False)
     asset_class = Column(String, nullable=False)
@@ -35,7 +37,7 @@ class Fund(Base):
 # Table: Fund Codes
 class FundCode(Base):
     __tablename__ = 'fund_codes'
-    fund_code_id = Column(Integer, primary_key=True)
+    fund_code_id = Column(Integer, primary_key=True, autoincrement=True)  # Auto-incremented ID
     fund_id = Column(Integer, ForeignKey('funds.fund_id'))
     code = Column(String, nullable=False)
     portfolio_code = Column(String)
@@ -51,7 +53,7 @@ class FundCode(Base):
 # Table: Benchmarks
 class Benchmark(Base):
     __tablename__ = 'benchmarks'
-    benchmark_id = Column(Integer, primary_key=True)
+    benchmark_id = Column(Integer, primary_key=True, autoincrement=True)  # Auto-incremented ID
     fund_id = Column(Integer, ForeignKey('funds.fund_id'))
     name = Column(String, nullable=False)
     indices = Column(String, nullable=False)
@@ -63,7 +65,7 @@ class Benchmark(Base):
 # Table: Share Classes
 class ShareClass(Base):
     __tablename__ = 'share_classes'
-    share_class_id = Column(Integer, primary_key=True)
+    share_class_id = Column(Integer, primary_key=True, autoincrement=True)  # Auto-incremented ID
     fund_id = Column(Integer, ForeignKey('funds.fund_id'))
     short_name = Column(String, nullable=False)
     status = Column(String, nullable=False)
@@ -78,7 +80,7 @@ class ShareClass(Base):
 # Table: Share Class Codes
 class ShareClassCode(Base):
     __tablename__ = 'share_class_codes'
-    share_class_code_id = Column(Integer, primary_key=True)
+    share_class_code_id = Column(Integer, primary_key=True, autoincrement=True)  # Auto-incremented ID
     share_class_id = Column(Integer, ForeignKey('share_classes.share_class_id'))
     code = Column(String, nullable=False)
     isin = Column(String, nullable=False)
@@ -92,7 +94,7 @@ class ShareClassCode(Base):
 # Table: Production
 class Production(Base):
     __tablename__ = 'productions'
-    production_id = Column(Integer, primary_key=True)
+    production_id = Column(Integer, primary_key=True, autoincrement=True)  # Auto-incremented ID
     fund_id = Column(Integer, ForeignKey('funds.fund_id'))
     share_class_id = Column(Integer, ForeignKey('share_classes.share_class_id'))
     potential_data_source = Column(String)
@@ -116,7 +118,7 @@ class Production(Base):
 # Table: Merger
 class Merger(Base):
     __tablename__ = 'mergers'
-    merger_id = Column(Integer, primary_key=True)
+    merger_id = Column(Integer, primary_key=True, autoincrement=True)  # Auto-incremented ID
     production_id = Column(Integer, ForeignKey('productions.production_id'))
     output_file_name = Column(String)
     frequency = Column(String)
@@ -146,7 +148,7 @@ class Merger(Base):
 # Table: Scheduler Parameters
 class SchedulerParam(Base):
     __tablename__ = 'scheduler_params'
-    scheduler_param_id = Column(Integer, primary_key=True)
+    scheduler_param_id = Column(Integer, primary_key=True, autoincrement=True)  # Auto-incremented ID
     crystal_template_id = Column(Integer)
     template_name = Column(String)
     is_local = Column(Boolean)
@@ -164,14 +166,14 @@ class SchedulerParam(Base):
 # Table: Technical Tables
 class TechnicalTable(Base):
     __tablename__ = 'technical_tables'
-    tt_id = Column(Integer, primary_key=True)
+    tt_id = Column(Integer, primary_key=True, autoincrement=True)  # Auto-incremented ID
     tt_category = Column(String, nullable=False)
     tt_value = Column(String, nullable=False)
 
 
 class TechnicalTableFrequency(Base):
     __tablename__ = 'technical_table_frequencies'
-    tt_fr_id = Column(Integer, primary_key=True)
+    tt_fr_id = Column(Integer, primary_key=True, autoincrement=True)  # Auto-incremented ID
     tt_id = Column(Integer, ForeignKey('technical_tables.tt_id'))
     tt_value = Column(String, nullable=False)
 
@@ -182,36 +184,39 @@ class TechnicalTableFrequency(Base):
 # Table: Holidays
 class Holiday(Base):
     __tablename__ = 'holidays'
-    holiday_id = Column(Integer, primary_key=True)
+    holiday_id = Column(Integer, primary_key=True, autoincrement=True)  # Auto-incremented ID
     date = Column(Date, nullable=False)
     description = Column(String, nullable=False)
 
+# Table: Data Point Categories
+class DataPointCategory(Base):
+    __tablename__ = 'data_point_categories'
+    data_point_category_id = Column(Integer, primary_key=True, autoincrement=True)  # Auto-incremented ID
+    category_name = Column(String, nullable=False)
+
+    # Relationships
+    data_points = relationship("DataPoint", back_populates="category")
 
 # Table: Data Points
 class DataPoint(Base):
     __tablename__ = 'data_points'
-    data_point_id = Column(Integer, primary_key=True)
+    data_point_id = Column(Integer, primary_key=True, autoincrement=True)  # Auto-incremented ID
     name = Column(String, nullable=False)
     category = Column(String, nullable=False)
     data_source = Column(String)
     provider = Column(String)
     methodology = Column(String)
 
-
-# Table: Data Point Categories
-class DataPointCategory(Base):
-    __tablename__ = 'data_point_categories'
-    data_point_category_id = Column(Integer, primary_key=True)
-    category_name = Column(String, nullable=False)
+    # Foreign Key linking to DataPointCategory
+    category_id = Column(Integer, ForeignKey('data_point_categories.data_point_category_id'))
 
     # Relationships
-    data_points = relationship("DataPoint")
-
+    category = relationship("DataPointCategory", back_populates="data_points")
 
 # Table: Production Data Points (relationship table)
 class ProductionDataPoint(Base):
     __tablename__ = 'production_data_points'
-    production_data_point_id = Column(Integer, primary_key=True)
+    production_data_point_id = Column(Integer, primary_key=True, autoincrement=True)  # Auto-incremented ID
     production_id = Column(Integer, ForeignKey('productions.production_id'))
     data_point_id = Column(Integer, ForeignKey('data_points.data_point_id'))
 
@@ -223,13 +228,13 @@ class ProductionDataPoint(Base):
 # Table: Production Groups
 class ProductionGroup(Base):
     __tablename__ = 'production_groups'
-    production_group_id = Column(Integer, primary_key=True)
+    production_group_id = Column(Integer, primary_key=True, autoincrement=True)  # Auto-incremented ID
     group_name = Column(String, nullable=False)
 
 
 class ProductionGroupRelation(Base):
     __tablename__ = 'production_group_relations'
-    production_group_relation_id = Column(Integer, primary_key=True)
+    production_group_relation_id = Column(Integer, primary_key=True, autoincrement=True)  # Auto-incremented ID
     production_group_id = Column(Integer, ForeignKey('production_groups.production_group_id'))
     production_id = Column(Integer, ForeignKey('productions.production_id'))
 
@@ -241,7 +246,7 @@ class ProductionGroupRelation(Base):
 # Table: Dashboards (dynamic data)
 class Dashboard(Base):
     __tablename__ = 'dashboards'
-    dashboard_id = Column(Integer, primary_key=True)
+    dashboard_id = Column(Integer, primary_key=True, autoincrement=True)  # Auto-incremented ID
     production_id = Column(Integer, ForeignKey('productions.production_id'))
     historical_status = Column(String, nullable=False)
 
@@ -252,7 +257,7 @@ class Dashboard(Base):
 # Table: Holidays History (dynamic data)
 class HolidayHistory(Base):
     __tablename__ = 'holiday_histories'
-    holiday_history_id = Column(Integer, primary_key=True)
+    holiday_history_id = Column(Integer, primary_key=True, autoincrement=True)  # Auto-incremented ID
     holiday_id = Column(Integer, ForeignKey('holidays.holiday_id'))
     historical_status = Column(String, nullable=False)
 
