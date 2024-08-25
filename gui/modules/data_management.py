@@ -1,4 +1,10 @@
+# gui/modules/data_management.py
+
 import tkinter as tk
+from tkinter import ttk
+from gui.modules.data_management_components.fund_management import FundManagement
+from gui.modules.data_management_components.code_management import CodeManagement
+from gui.modules.data_management_components.share_class_management import ShareClassManagement
 
 
 class DataManagement:
@@ -6,5 +12,18 @@ class DataManagement:
         self.frame = tk.Frame(parent, bg="#ecf0f1")
         self.frame.pack(fill="both", expand=True)
 
-        label = tk.Label(self.frame, text="Data Management", font=("Helvetica", 16))
-        label.pack(pady=20)
+        # Create tabs for different data management functionalities
+        notebook = ttk.Notebook(self.frame)
+        notebook.pack(fill="both", expand=True)
+
+        fund_tab = tk.Frame(notebook)
+        code_tab = tk.Frame(notebook)
+        share_class_tab = tk.Frame(notebook)
+
+        notebook.add(fund_tab, text="Funds")
+        notebook.add(code_tab, text="Codes")
+        notebook.add(share_class_tab, text="Share Classes")
+
+        FundManagement(fund_tab)
+        CodeManagement(code_tab)
+        ShareClassManagement(share_class_tab)
