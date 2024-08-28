@@ -96,6 +96,92 @@ class FundCodesWindow:
             messagebox.showerror("Error", f"An error occurred: {e}")
         finally:
             self.window.destroy()  # Close the window after submission
+# gui/modules/data_management_components/code_management.py
+
+import tkinter as tk
+from tkinter import messagebox
+
+from sqlalchemy.exc import SQLAlchemyError
+from db.models import ShareClassCode
+
+
+class ShareClassCodeWindow:
+    def __init__(self, parent, session, share_class_id=None, share_class_code_id=None, refresh_callback=None):
+        self.session = session
+        self.share_class_id = share_class_id
+        self.share_class_code_id = share_class_code_id
+        self.refresh_callback = refresh_callback
+        self.window = tk.Toplevel(parent)
+        self.parent = parent
+        self.window.title("Modify Share Class Code" if share_class_code_id else "Add Share Class Code")
+
+        # Share Class Code Form
+        self.code_entry = self.create_form_entry("Code")
+        self.isin_entry = self.create_form_entry("ISIN")
+        self.series_code_entry = self.create_form_entry("Series Code")
+        self.gfc_fund_entry = self.create_form_entry("GFC Fund")
+
+        # If modifying, load the existing share class code data
+        if share_class_code_id:
+            self.load_share_class_code_data()
+
+        # Submit Button
+        submit_button = tk.Button(self.window, text="Submit", command=self.save_share_class_code)
+        submit_button.pack(pady=20)
+
+    def create_form_entry(self, label_text, initial_value=None):
+        """Creates a label and entry field for a form."""
+        frame = tk.Frame(self.window)
+        label = tk.Label(frame, text=label_text)
+        label.pack(side="left")
+        entry = tk.Entry(frame)
+        if initial_value:
+            entry.insert(0, initial_value)
+        entry.pack(side="right", fill="x", expand=True)
+        frame.pack(fill="x", pady=5)
+        return entry
+
+    def load_share_class_code_data(self):
+        """Load existing share class code data into the form fields for modification."""
+        share_class_code = self.session.query(ShareClassCode).filter_by(share_class_code_id=self.share_class_code_id).one()
+        self.code_entry.insert(0, share_class_code.code)
+        self.isin_entry.insert(0, share_class_code.isin)
+        self.series_code_entry.insert(0, share_class_code.series_code)
+        self.gfc_fund_entry.insert(0, share_class_code.gfc_fund)
+
+    def save_share_class_code(self):
+        """Saves the share class code to the database."""
+        try:
+            if self.share_class_code_id:
+                # Modify existing share class code
+                share_class_code = self.session.query(ShareClassCode).filter_by(
+                    share_class_code_id=self.share_class_code_id).one()
+                # update fields
+                share_class_code.code = self.code_entry.get()
+                share_class_code.isin = self.isin_entry.get()
+                share_class_code.series_code = self.series_code_entry.get()
+                share_class_code.gfc_fund = self.gfc_fund_entry.get()
+            else:
+                # Add new share class code
+                share_class_code = ShareClassCode(
+                    share_class_id=self.share_class_id,
+                    code=self.code_entry.get(),
+                    isin=self.isin_entry.get(),
+                    series_code=self.series_code_entry.get(),
+                    gfc_fund=self.gfc_fund_entry.get()
+                )
+                self.session.add(share_class_code)
+
+            self.session.commit()
+            if self.refresh_callback:
+                self.refresh_callback()  # Refresh the TreeView after saving
+            messagebox.showinfo("Success", "Share class code saved successfully!")
+        except SQLAlchemyError as e:
+            self.session.rollback()
+            messagebox.showerror("Error", f"An error occurred: {e}")
+        finally:
+            self.window.destroy()  # Close the window after submission
+
 
 
 

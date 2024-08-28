@@ -1,5 +1,3 @@
-# gui/modules/data_management_components/fund_management.py
-
 import tkinter as tk
 from tkinter import ttk, Menu, messagebox
 from datetime import datetime
@@ -7,11 +5,11 @@ from datetime import datetime
 import sqlalchemy
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.exc import SQLAlchemyError
-from db.models import Fund, ShareClass, FundCode
+from db.models import Fund, ShareClass, FundCode, ShareClassCode
 from config.settings import DATABASE_URL
 from sqlalchemy import create_engine
 from gui.modules.data_management_components.share_class_management import ShareClassWindow
-from gui.modules.data_management_components.code_management import FundCodesWindow
+from gui.modules.data_management_components.code_management import FundCodesWindow, ShareClassCodeWindow
 from gui.modules.data_management_components.common_widget import create_form_entry, create_button
 
 
@@ -204,6 +202,8 @@ class FundManagement:
         # Bind right-click event to open Share Class context menu
         share_classes_tree.bind("<Button-2>",
                                 lambda event: self.show_share_class_context_menu(event, share_classes_tree))
+        # Bind double-click event to open Share Class Codes window
+        share_classes_tree.bind("<Double-1>", lambda event: self.on_share_class_double_click(event, share_classes_tree))
 
         # Fund Codes Tab
         fund_codes_frame = tk.Frame(notebook)
@@ -251,6 +251,7 @@ class FundManagement:
             context_menu = Menu(self.parent, tearoff=0)
             context_menu.add_command(label="Modify Share Class", command=lambda: self.modify_share_class(tree))
             context_menu.add_command(label="Delete Share Class", command=lambda: self.delete_share_class(tree))
+            context_menu.add_command(label="Add Share Class Code", command=lambda: self.add_share_class_code(tree))
             context_menu.tk_popup(event.x_root, event.y_root)
 
     def show_fund_code_context_menu(self, event, tree):
@@ -313,6 +314,103 @@ class FundManagement:
         except Exception as e:
             self.session.rollback()
             messagebox.showerror("Error", f"An error occurred: {e}")
+
+    def on_share_class_double_click(self, event, tree):
+        """Handles double-click event to show share class codes linked to the share class."""
+        selected_item = tree.selection()[0]
+        share_class_id = tree.item(selected_item)['values'][0]
+        self.show_share_class_code_window(share_class_id)
+
+    def show_share_class_code_window(self, share_class_id):
+        """Opens a window to show share class codes linked to the selected share class."""
+        window = tk.Toplevel(self.parent)
+        window.title("Share Class Codes")
+
+        share_class_code_tree = ttk.Treeview(window,
+                                             columns=("Share Class Code ID", "Code", "ISIN", "Series Code", "GFC Fund"),
+                                             show="headings")
+        share_class_code_tree.pack(fill="both", expand=True)
+
+        for col in ("Share Class Code ID", "Code", "ISIN", "Series Code", "GFC Fund"):
+            share_class_code_tree.heading(col, text=col)
+
+        self.refresh_share_class_code_tree(share_class_code_tree, share_class_id)
+
+        # Bind right-click event to open Share Class Code context menu
+        share_class_code_tree.bind("<Button-2>",
+                                   lambda event: self.show_share_class_code_context_menu(event, share_class_code_tree))
+
+    def refresh_share_class_code_tree(self, tree, share_class_id):
+        """Refresh the share class codes in the Treeview."""
+        # Clear the existing entries in the Treeview
+        for row in tree.get_children():
+            tree.delete(row)
+
+        # Query all share class codes for the given share class and insert them into the Treeview
+        share_class_codes = self.session.query(ShareClassCode).filter_by(share_class_id=share_class_id).all()
+        for scc in share_class_codes:
+            tree.insert("", "end", values=(scc.share_class_code_id, scc.code, scc.isin, scc.series_code, scc.gfc_fund))
+
+    def add_share_class_code(self, tree):
+        """Opens a window to add a new share class code to the selected share class."""
+        selected_item = tree.selection()[0]
+        share_class_id = tree.item(selected_item)['values'][0]
+        # Open ShareClassCodeWindow without a refresh callback, as we don't need to refresh immediately
+        ShareClassCodeWindow(self.parent, self.session, share_class_id=share_class_id)
+
+    def modify_share_class_code(self, tree):
+        """Opens a window to modify the selected share class code."""
+        try:
+            selected_item = tree.selection()[0]
+            share_class_code_id = tree.item(selected_item)['values'][0]
+
+            # Retrieve the share class code using share_class_code_id
+            share_class_code = self.session.query(ShareClassCode).filter_by(
+                share_class_code_id=share_class_code_id).one()
+
+            # Pass the correct share_class_id for refreshing the TreeView
+            ShareClassCodeWindow(
+                self.parent,
+                self.session,
+                share_class_code_id=share_class_code_id,
+                refresh_callback=lambda: self.refresh_share_class_code_tree(tree, share_class_code.share_class_id)
+            )
+        except IndexError:
+            messagebox.showerror("Selection Error", "No share class code selected.")
+        except sqlalchemy.exc.NoResultFound:
+            messagebox.showerror("Not Found", "The selected share class code was not found in the database.")
+        except Exception as e:
+            messagebox.showerror("Error", f"An unexpected error occurred: {e}")
+
+    def show_share_class_code_context_menu(self, event, tree):
+        """Shows a context menu for the share class codes."""
+        selected_item = tree.identify_row(event.y)
+        if selected_item:
+            tree.selection_set(selected_item)
+            context_menu = Menu(self.parent, tearoff=0)
+            context_menu.add_command(label="Modify Share Class Code",
+                                     command=lambda: self.modify_share_class_code(tree))
+            context_menu.add_command(label="Delete Share Class Code",
+                                     command=lambda: self.delete_share_class_code(tree))
+            context_menu.tk_popup(event.x_root, event.y_root)
+
+    def delete_share_class_code(self, share_class_code_tree):
+        """Deletes the selected share class code from the database."""
+        selected_item = share_class_code_tree.selection()[0]
+        share_class_code_id = share_class_code_tree.item(selected_item)['values'][0]
+        try:
+            share_class_code = self.session.query(ShareClassCode).filter_by(
+                share_class_code_id=share_class_code_id).one()
+            self.session.delete(share_class_code)
+            self.session.commit()
+            share_class_code_tree.delete(selected_item)
+            messagebox.showinfo("Success", "Share class code deleted successfully!")
+        except Exception as e:
+            self.session.rollback()
+            messagebox.showerror("Error", f"An error occurred: {e}")
+
+
+
 
 
 class FundWindow:
@@ -455,5 +553,3 @@ class FundWindow:
                     fund.benchmark_indicator
                 )
             )
-
-
