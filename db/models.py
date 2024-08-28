@@ -28,7 +28,7 @@ class Fund(Base):
     benchmark_indicator = Column(String, nullable=False)
 
     # Relationships
-    fund_codes = relationship("FundCode", back_populates="fund")
+    fund_codes = relationship("FundCode", uselist=False, back_populates="fund")
     benchmarks = relationship("Benchmark", back_populates="fund")
     share_classes = relationship("ShareClass", back_populates="fund")
     productions = relationship("Production", back_populates="fund")
@@ -38,7 +38,7 @@ class Fund(Base):
 class FundCode(Base):
     __tablename__ = 'fund_codes'
     fund_code_id = Column(Integer, primary_key=True, autoincrement=True)  # Auto-incremented ID
-    fund_id = Column(Integer, ForeignKey('funds.fund_id'))
+    fund_id = Column(Integer, ForeignKey('funds.fund_id'), unique=True)
     code = Column(String, nullable=False)
     portfolio_code = Column(String)
     portfolio_code_apo = Column(String)
@@ -47,7 +47,7 @@ class FundCode(Base):
     lei = Column(String)
 
     # Relationship
-    fund = relationship("Fund", back_populates="fund_codes")
+    fund = relationship("Fund", uselist=False, back_populates="fund_codes")
 
 
 # Table: Benchmarks
@@ -74,14 +74,14 @@ class ShareClass(Base):
 
     # Relationships
     fund = relationship("Fund", back_populates="share_classes")
-    share_class_codes = relationship("ShareClassCode", back_populates="share_class")
+    share_class_codes = relationship("ShareClassCode",uselist=False,  back_populates="share_class")
 
 
 # Table: Share Class Codes
 class ShareClassCode(Base):
     __tablename__ = 'share_class_codes'
     share_class_code_id = Column(Integer, primary_key=True, autoincrement=True)  # Auto-incremented ID
-    share_class_id = Column(Integer, ForeignKey('share_classes.share_class_id'))
+    share_class_id = Column(Integer, ForeignKey('share_classes.share_class_id'),unique=True)
     code = Column(String, nullable=False)
     isin = Column(String, nullable=False)
     series_code = Column(String, nullable=False)
@@ -188,6 +188,7 @@ class Holiday(Base):
     date = Column(Date, nullable=False)
     description = Column(String, nullable=False)
 
+
 # Table: Data Point Categories
 class DataPointCategory(Base):
     __tablename__ = 'data_point_categories'
@@ -196,6 +197,7 @@ class DataPointCategory(Base):
 
     # Relationships
     data_points = relationship("DataPoint", back_populates="category")
+
 
 # Table: Data Points
 class DataPoint(Base):
@@ -212,6 +214,7 @@ class DataPoint(Base):
 
     # Relationships
     category = relationship("DataPointCategory", back_populates="data_points")
+
 
 # Table: Production Data Points (relationship table)
 class ProductionDataPoint(Base):

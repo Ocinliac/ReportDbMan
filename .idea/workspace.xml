@@ -6,9 +6,8 @@
   <component name="ChangeListManager">
     <list default="true" id="c1e0fed1-0380-4f3b-a5ce-165ee48bf8cd" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/MasterReportDb.sqlite3" beforeDir="false" afterPath="$PROJECT_DIR$/MasterReportDb.sqlite3" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/gui/modules/data_management_components/code_management.py" beforeDir="false" afterPath="$PROJECT_DIR$/gui/modules/data_management_components/code_management.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/gui/modules/data_management_components/fund_management.py" beforeDir="false" afterPath="$PROJECT_DIR$/gui/modules/data_management_components/fund_management.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/MasterReportDb.sqlite3" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/db/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/db/models.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
