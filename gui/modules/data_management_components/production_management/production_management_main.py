@@ -5,19 +5,16 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.exc import SQLAlchemyError
 from db.models import Production
 from config.settings import DATABASE_URL
+from gui.modules.data_management_components.production_management.people_management import PeopleManagement
 
 
 class ProductionManagement:
-    def __init__(self, parent):
+    def __init__(self, parent, session):
+        self.session = session
         # Create the main frame for the Production Management tab
         self.parent = parent
         self.frame = tk.Frame(parent, bg="#ecf0f1")
         self.frame.pack(fill="both", expand=True)
-
-        # Setup the database session
-        self.engine = create_engine(DATABASE_URL)
-        Session = sessionmaker(bind=self.engine)
-        self.session = Session()
 
         # Create a notebook for sub-tabs inside Production Management
         self.notebook = ttk.Notebook(self.frame)
@@ -35,6 +32,7 @@ class ProductionManagement:
 
         # Initialize sub-tab content
         self.setup_production_ui(production_sub_tab)
+        self.setup_people_management_ui(people_sub_tab)
 
     def setup_production_ui(self, tab):
         """Set up the user interface for production management."""
@@ -68,6 +66,9 @@ class ProductionManagement:
 
         self.load_productions()
 
+    def setup_people_management_ui(self, tab):
+        """Setup the UI for People Management sub-tab."""
+        PeopleManagement(tab, self.session)  # Initialize PeopleManagement
     def load_productions(self):
         """Loads productions from the database into the Treeview."""
         # Clear the existing entries in the Treeview
