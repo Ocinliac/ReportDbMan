@@ -1,169 +1,150 @@
-# File: /Users/nicolascailmail/PyProject/ReportDbMan/gui/modules/data_management_components/production_management/assignment_management.py
-
 import tkinter as tk
-from tkinter import ttk, Menu, messagebox
-from db.models import ProductionAssignment
+from tkinter import ttk, messagebox
+from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
-
-class AssignmentManagement:
-    def __init__(self, parent, session):
-        self.session = session
-        self.frame = tk.Frame(parent, bg="#ecf0f1")
-        self.frame.pack(fill="both", expand=True)
-
-        label = tk.Label(self.frame, text="Assignment Management", font=("Helvetica", 16))
-        label.pack(pady=20)
-
-        # Define columns for the Treeview
-        columns = ("Assignment ID", "Production ID", "People ID", "Role")
-
-        # Treeview for displaying assignments
-        self.tree = ttk.Treeview(self.frame, columns=columns, show="headings")
-
-        # Define the column headers
-        for col in columns:
-            self.tree.heading(col, text=col)
-
-        self.tree.pack(fill="both", expand=True, pady=10)
-
-        # Add Assignment button
-        add_assignment_button = tk.Button(self.frame, text="Add Assignment", command=self.open_add_assignment_window)
-        add_assignment_button.pack(pady=5)
-
-        # Bind right-click and double-click events
-        self.tree.bind("<Button-2>", self.show_context_menu)
-        self.tree.bind("<Double-1>", self.on_double_click)
-
-        self.load_assignments()
-
-    def load_assignments(self):
-        """Loads assignments from the database into the Treeview."""
-        # Clear the existing entries in the Treeview
-        for row in self.tree.get_children():
-            self.tree.delete(row)
-
-        # Query all assignments from the database and insert them into the Treeview
-        for assignment in self.session.query(ProductionAssignment).all():
-            self.tree.insert(
-                "", "end",
-                values=(
-                    assignment.assignment_id,
-                    assignment.production_id,
-                    assignment.people_id,
-                    assignment.role
-                )
-            )
-
-    def show_context_menu(self, event):
-        """Shows a context menu on right-click."""
-        selected_item = self.tree.identify_row(event.y)
-        if selected_item:
-            self.tree.selection_set(selected_item)
-            context_menu = Menu(self.frame, tearoff=0)
-            context_menu.add_command(label="Modify Assignment", command=self.modify_assignment)
-            context_menu.add_command(label="Delete Assignment", command=self.delete_assignment)
-            context_menu.tk_popup(event.x_root, event.y_root)
-
-    def on_double_click(self, event):
-        """Handles double-click event to show assignment details."""
-        selected_item = self.tree.selection()[0]
-        assignment_id = self.tree.item(selected_item)['values'][0]
-        self.show_assignment_details(assignment_id)
-
-    def open_add_assignment_window(self):
-        """Opens a window to add a new assignment."""
-        AssignmentWindow(self.frame, self.session, refresh_callback=self.load_assignments)
-
-    def modify_assignment(self):
-        """Opens a window to modify the selected assignment."""
-        selected_item = self.tree.selection()[0]
-        assignment_id = self.tree.item(selected_item)['values'][0]
-        AssignmentWindow(self.frame, self.session, assignment_id=assignment_id, refresh_callback=self.load_assignments)
-
-    def delete_assignment(self):
-        """Deletes the selected assignment from the database."""
-        selected_item = self.tree.selection()[0]
-        assignment_id = self.tree.item(selected_item)['values'][0]
-        try:
-            assignment = self.session.query(ProductionAssignment).filter_by(assignment_id=assignment_id).one()
-            self.session.delete(assignment)
-            self.session.commit()
-            self.tree.delete(selected_item)
-            messagebox.showinfo("Success", "Assignment deleted successfully!")
-        except SQLAlchemyError as e:
-            self.session.rollback()
-            messagebox.showerror("Error", f"An error occurred: {e}")
-
-    def show_assignment_details(self, assignment_id):
-        """Shows detailed information about the selected assignment."""
-        # Implement the logic to show detailed information about the assignment
-        pass
+from db.models import ProductionAssignment, People
 
 
 class AssignmentWindow:
-    def __init__(self, parent, session, assignment_id=None, refresh_callback=None):
+    def __init__(self, parent, session, production_id):
         self.session = session
-        self.assignment_id = assignment_id
-        self.refresh_callback = refresh_callback
+        self.production_id = production_id
         self.window = tk.Toplevel(parent)
-        self.window.title("Modify Assignment" if assignment_id else "Add Assignment")
+        self.window.title("Manage Assignment")
 
-        # Assignment Form
-        self.production_id_entry = self.create_form_entry("Production ID")
-        self.people_id_entry = self.create_form_entry("People ID")
-        self.role_entry = self.create_form_entry("Role")
+        # Create a notebook for the two roles
+        self.notebook = ttk.Notebook(self.window)
+        self.notebook.pack(fill="both", expand=True)
 
-        # If modifying, load the existing assignment data
-        if assignment_id:
-            self.load_assignment_data()
+        # Create frames for Reporting Analyst and Portfolio Manager
+        self.create_role_frame("Reporting Analyst")
+        self.create_role_frame("Portfolio Manager")
 
-        # Submit Button
-        submit_button = tk.Button(self.window, text="Submit", command=self.save_assignment)
-        submit_button.pack(pady=20)
+    def create_role_frame(self, role):
+        """Helper function to create and set up UI for a specific role frame."""
+        frame = tk.Frame(self.notebook, bg="#ecf0f1")
+        self.notebook.add(frame, text=role)
 
-    def create_form_entry(self, label_text, initial_value=None):
-        """Creates a label and entry field for a form."""
-        frame = tk.Frame(self.window)
-        label = tk.Label(frame, text=label_text)
-        label.pack(side="left")
-        entry = tk.Entry(frame)
-        if initial_value:
-            entry.insert(0, initial_value)
-        entry.pack(side="right", fill="x", expand=True)
-        frame.pack(fill="x", pady=5)
-        return entry
+        # Search bar setup
+        search_var = tk.StringVar()
+        search_entry = self.create_search_bar(frame, role, search_var)
 
-    def load_assignment_data(self):
-        """Load existing assignment data into the form fields for modification."""
-        assignment = self.session.query(ProductionAssignment).filter_by(assignment_id=self.assignment_id).one()
-        self.production_id_entry.insert(0, assignment.production_id)
-        self.people_id_entry.insert(0, assignment.people_id)
-        self.role_entry.insert(0, assignment.role)
+        # Listbox to display search results
+        result_listbox = self.create_listbox(frame, height=5)
 
-    def save_assignment(self):
-        """Saves the assignment to the database."""
+        # Button frame for Add/Remove functionality
+        self.create_add_remove_buttons(frame, result_listbox, role)
+
+        # Listbox to display selected people
+        selected_listbox = self.create_listbox(frame, height=10)
+
+        # Store listboxes and state in the frame
+        frame.result_listbox = result_listbox
+        frame.selected_listbox = selected_listbox
+        frame.selected_people = []
+
+        # Load existing assignments
+        self.load_existing_assignments(role, frame)
+
+        # Bind search bar update
+        search_entry.bind("<KeyRelease>", lambda event: self.update_suggestions(role, frame, search_var))
+
+    def create_search_bar(self, frame, role, search_var):
+        """Helper function to create the search bar for a role."""
+        search_label = tk.Label(frame, text=f"Search People ({role}):")
+        search_label.pack(pady=5)
+        search_entry = tk.Entry(frame, textvariable=search_var)
+        search_entry.pack(pady=5)
+        return search_entry
+
+    def create_listbox(self, frame, height=5):
+        """Helper function to create a Listbox widget."""
+        listbox = tk.Listbox(frame, height=height)
+        listbox.pack(pady=5)
+        return listbox
+
+    def create_add_remove_buttons(self, frame, result_listbox, role):
+        """Helper function to create Add and Remove buttons."""
+        button_frame = tk.Frame(frame)
+        button_frame.pack(pady=5)
+        add_button = tk.Button(button_frame, text="Add >>",
+                               command=lambda: self.add_person(result_listbox, role, frame))
+        add_button.pack(side="left", padx=5)
+        remove_button = tk.Button(button_frame, text="<< Remove",
+                                  command=lambda: self.remove_person(frame, role))
+        remove_button.pack(side="left", padx=5)
+
+    def load_existing_assignments(self, role, frame):
+        """Load existing assignments for a role into the selected_listbox."""
         try:
-            if self.assignment_id:
-                # Modify existing assignment
-                assignment = self.session.query(ProductionAssignment).filter_by(assignment_id=self.assignment_id).one()
-                assignment.production_id = self.production_id_entry.get()
-                assignment.people_id = self.people_id_entry.get()
-                assignment.role = self.role_entry.get()
-            else:
-                # Add new assignment
-                assignment = ProductionAssignment(
-                    production_id=self.production_id_entry.get(),
-                    people_id=self.people_id_entry.get(),
-                    role=self.role_entry.get()
+            assignments = self.session.query(ProductionAssignment).filter_by(
+                production_id=self.production_id, AssignRole=role).order_by(ProductionAssignment.assignment_id).all()
+            for assignment in assignments:
+                person = self.session.query(People).filter_by(people_id=assignment.people_id).one()
+                person_display = f"{person.people_id}: {person.name}"
+                frame.selected_people.append(person_display)
+                frame.selected_listbox.insert(tk.END, person_display)
+        except SQLAlchemyError as e:
+            messagebox.showerror("Error", f"An error occurred while loading assignments: {e}")
+
+    def update_suggestions(self, role, frame, search_var):
+        """Update the suggestions in the result_listbox based on the search term."""
+        search_term = search_var.get().strip()
+        frame.result_listbox.delete(0, tk.END)
+
+        try:
+            people_query = self.session.query(People).filter(func.lower(People.role) == func.lower(role))
+
+            # Apply search filter if a search term is provided
+            if search_term:
+                people_query = people_query.filter(func.lower(People.name).ilike(f"%{search_term.lower()}%"))
+
+            people = people_query.all()
+
+            for person in people:
+                person_display = f"{person.people_id}: {person.name}"
+                if person_display not in frame.selected_people:
+                    frame.result_listbox.insert(tk.END, person_display)
+
+        except SQLAlchemyError as e:
+            messagebox.showerror("Error", f"An error occurred while searching for people: {e}")
+
+    def add_person(self, result_listbox, role, frame):
+        """Add the selected person to the selected_listbox and update the production assignment."""
+        selected = result_listbox.get(tk.ACTIVE)
+        if selected and selected not in frame.selected_people:
+            frame.selected_people.append(selected)
+            frame.selected_listbox.insert(tk.END, selected)
+            self.update_production_assignment(role, frame)
+
+    def remove_person(self, frame, role):
+        """Remove the selected person from the selected_listbox and update the production assignment."""
+        selected = frame.selected_listbox.get(tk.ACTIVE)
+        if selected in frame.selected_people:
+            frame.selected_people.remove(selected)
+            frame.selected_listbox.delete(tk.ACTIVE)
+            self.update_production_assignment(role, frame)
+
+    def update_production_assignment(self, role, frame):
+        """Update the production assignment in the database."""
+        try:
+            # Remove the current assignments for the given role
+            self.session.query(ProductionAssignment).filter_by(production_id=self.production_id,
+                                                               AssignRole=role).delete()
+            self.session.commit()
+
+            # Re-insert selected people with the updated order
+            for idx, person in enumerate(frame.selected_people, start=1):
+                people_id = int(person.split(":")[0])
+                new_assignment = ProductionAssignment(
+                    production_id=self.production_id,
+                    people_id=people_id,
+                    AssignRole=role,
+                    order=idx
                 )
-                self.session.add(assignment)
+                self.session.add(new_assignment)
 
             self.session.commit()
-            if self.refresh_callback:
-                self.refresh_callback()
-            messagebox.showinfo("Success", "Assignment saved successfully!")
         except SQLAlchemyError as e:
             self.session.rollback()
-            messagebox.showerror("Error", f"An error occurred: {e}")
-        finally:
-            self.window.destroy()
+            messagebox.showerror("Error", f"An error occurred while updating assignments: {e}")

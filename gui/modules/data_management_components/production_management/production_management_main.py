@@ -5,6 +5,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.exc import SQLAlchemyError
 from db.models import Production
 from config.settings import DATABASE_URL
+from gui.modules.data_management_components.production_management.assignment_management import AssignmentWindow
 from gui.modules.data_management_components.production_management.people_management import PeopleManagement
 
 
@@ -23,12 +24,12 @@ class ProductionManagement:
         # Create sub-tabs for Production, People, and Assignment management
         production_sub_tab = tk.Frame(self.notebook)
         people_sub_tab = tk.Frame(self.notebook)
-        assignment_sub_tab = tk.Frame(self.notebook)
+
 
         # Add sub-tabs to the notebook
         self.notebook.add(production_sub_tab, text="Production")
         self.notebook.add(people_sub_tab, text="People")
-        self.notebook.add(assignment_sub_tab, text="Assignments")
+
 
         # Initialize sub-tab content
         self.setup_production_ui(production_sub_tab)
@@ -106,6 +107,7 @@ class ProductionManagement:
             context_menu = Menu(self.frame, tearoff=0)
             context_menu.add_command(label="Modify Production", command=self.modify_production)
             context_menu.add_command(label="Delete Production", command=self.delete_production)
+            context_menu.add_command(label="Manage Assignment", command=self.manage_assignment)
             context_menu.tk_popup(event.x_root, event.y_root)
 
     def on_double_click(self, event):
@@ -141,6 +143,12 @@ class ProductionManagement:
     def show_production_details(self, production_id):
         """Shows detailed information about the selected production."""
         pass
+
+    def manage_assignment(self):
+        """Open the assignment management window for the selected production."""
+        selected_item = self.tree.selection()[0]
+        production_id = self.tree.item(selected_item)['values'][0]
+        AssignmentWindow(self.frame, self.session, production_id)
 
     def __del__(self):
         """Ensure that the session is closed when the instance is deleted."""

@@ -2,8 +2,11 @@
 
 import tkinter as tk
 from tkinter import ttk, Menu, messagebox
-from db.models import People
+from db.models import People, TechnicalTable
 from sqlalchemy.exc import SQLAlchemyError
+
+from utils.Global_Function import populate_combobox
+
 
 class PeopleManagement:
     def __init__(self, parent, session):
@@ -111,7 +114,9 @@ class PeopleWindow:
         # People Form
         self.name_entry = self.create_form_entry("Name")
         self.email_entry = self.create_form_entry("Email")
-        self.role_entry = self.create_form_entry("Role")
+
+        # Role Combobox (based on the 'role' category in the technical table)
+        self.role_combobox = self.create_combobox("Role", TechnicalTable, "tt_value", "tt_id", filter_by={'tt_category': 'Roles'})
 
         # If modifying, load the existing people data
         if people_id:
@@ -133,12 +138,25 @@ class PeopleWindow:
         frame.pack(fill="x", pady=5)
         return entry
 
+    def create_combobox(self, label_text, model, display_field, value_field, filter_by=None, on_select=None):
+        """Creates a label and combobox populated with values from the technical table."""
+        frame = tk.Frame(self.window)
+        label = tk.Label(frame, text=label_text)
+        label.pack(side="left")
+
+        combobox = ttk.Combobox(frame, state="readonly")
+        populate_combobox(self.session, combobox, model, display_field, value_field, filter_by, on_select)
+        combobox.pack(side="right", fill="x", expand=True)
+        frame.pack(fill="x", pady=5)
+
+        return combobox
+
     def load_people_data(self):
         """Load existing people data into the form fields for modification."""
         people = self.session.query(People).filter_by(people_id=self.people_id).one()
         self.name_entry.insert(0, people.name)
         self.email_entry.insert(0, people.email)
-        self.role_entry.insert(0, people.role)
+        self.role_combobox.set(f"{people.role}")  # Set the role in the combobox
 
     def save_people(self):
         """Saves the people to the database."""
@@ -148,13 +166,13 @@ class PeopleWindow:
                 people = self.session.query(People).filter_by(people_id=self.people_id).one()
                 people.name = self.name_entry.get()
                 people.email = self.email_entry.get()
-                people.role = self.role_entry.get()
+                people.role = self.role_combobox.get().split(": ")[1]  # Get the role value from the combobox
             else:
                 # Add new person
                 people = People(
                     name=self.name_entry.get(),
                     email=self.email_entry.get(),
-                    role=self.role_entry.get()
+                    role=self.role_combobox.get().split(": ")[1]  # Get the role value from the combobox
                 )
                 self.session.add(people)
 
@@ -167,3 +185,4 @@ class PeopleWindow:
             messagebox.showerror("Error", f"An error occurred: {e}")
         finally:
             self.window.destroy()
+
